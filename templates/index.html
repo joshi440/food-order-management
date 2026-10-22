@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodFlow | Order Management</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="/">🍽️ FoodFlow</a>
+    <span class="tagline">Food Order Management System</span>
+    <a class="nav-link" href="#orders">Manage Orders ↓</a>
+</header>
+
+<main class="container">
+    <section class="hero">
+        <div>
+            <p class="eyebrow">RESTAURANT DASHBOARD</p>
+            <h1>Good food.<br><span>Great service.</span></h1>
+            <p class="hero-text">
+                Manage your menu and orders from one simple dashboard.
+            </p>
+        </div>
+        <div class="hero-art" aria-hidden="true">🍔 🍕 🍜</div>
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="messages" aria-live="polite">
+          {% for category, message in messages %}
+            <p class="alert {{ category }}">{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <section class="stats">
+        <article class="stat-card">
+            <span>Total Orders</span>
+            <strong>{{ stats.orders }}</strong>
+        </article>
+        <article class="stat-card">
+            <span>Pending Orders</span>
+            <strong>{{ stats.pending }}</strong>
+        </article>
+        <article class="stat-card">
+            <span>Order Value</span>
+            <strong>₹{{ "%.2f"|format(stats.revenue) }}</strong>
+            <small>Excludes cancelled orders</small>
+        </article>
+    </section>
+
+    <section class="section-heading" id="menu">
+        <div>
+            <p class="eyebrow">FRESHLY PREPARED</p>
+            <h2>Our Menu</h2>
+        </div>
+        <span class="item-count">{{ menu|length }} items</span>
+    </section>
+
+    <section class="menu-grid">
+        {% for item in menu %}
+        <article class="food-card">
+            <div class="food-icon">
+                {% if item.category == "Pizza" %}🍕
+                {% elif item.category == "Indian" %}🥞
+                {% elif item.category == "Rice" %}🍚
+                {% elif item.category == "Burgers" %}🍔
+                {% else %}🥪{% endif %}
+            </div>
+            <span class="category">{{ item.category }}</span>
+            <h3>{{ item.name }}</h3>
+            <div class="food-bottom">
+                <strong>₹{{ "%.2f"|format(item.price) }}</strong>
+                <a href="#place-order" class="choose-link"
+                   data-food-id="{{ item.id }}">Choose →</a>
+            </div>
+        </article>
+        {% endfor %}
+    </section>
+
+    <section class="order-layout" id="place-order">
+        <div class="panel order-panel">
+            <p class="eyebrow">NEW ORDER</p>
+            <h2>Place an Order</h2>
+            <p class="muted">Enter customer details and choose a meal.</p>
+
+            <form action="{{ url_for('place_order') }}" method="POST"
+                  id="order-form">
+                <label for="customer_name">Customer Name</label>
+                <input id="customer_name" name="customer_name"
+                       type="text" maxlength="80"
+                       placeholder="Enter customer name" required>
+
+                <label for="food_id">Select Food</label>
+                <select name="food_id" id="food_id" required>
+                    <option value="">Choose a food item</option>
+                    {% for item in menu %}
+                    <option value="{{ item.id }}"
+                            data-price="{{ item.price }}">
+                        {{ item.name }} — ₹{{ "%.2f"|format(item.price) }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <label for="quantity">Quantity</label>
+                <input type="number" id="quantity" name="quantity"
+                       min="1" max="100" value="1" required>
+
+                <div class="bill">
+                    <span>Estimated total</span>
+                    <strong id="estimated-total">₹0.00</strong>
+                </div>
+
+                <button class="btn-primary" type="submit">Place Order</button>
+            </form>
+        </div>
+
+        <div class="panel info-panel">
+            <p class="eyebrow">HOW IT WORKS</p>
+            <h2>Simple order flow</h2>
+            <div class="step">
+                <span>01</span>
+                <div><h3>Choose your meal</h3>
+                    <p>Select any available food item.</p></div>
+            </div>
+            <div class="step">
+                <span>02</span>
+                <div><h3>Place the order</h3>
+                    <p>The bill is calculated automatically.</p></div>
+            </div>
+            <div class="step">
+                <span>03</span>
+                <div><h3>Track its status</h3>
+                    <p>Update orders as they are prepared and delivered.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-heading orders-heading" id="orders">
+        <div>
+            <p class="eyebrow">ORDER TRACKER</p>
+            <h2>Recent Orders</h2>
+        </div>
+        <span class="item-count">{{ orders|length }} orders</span>
+    </section>
+
+    {% if orders %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>Food</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>#{{ order.id }}</td>
+                    <td>{{ order.customer_name }}</td>
+                    <td>{{ order.food_name }}</td>
+                    <td>{{ order.quantity }}</td>
+                    <td>₹{{ "%.2f"|format(order.total) }}</td>
+                    <td>
+                        <span class="status status-{{ order.status|lower }}">
+                            {{ order.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <form method="POST"
+                                  action="{{ url_for('update_status',
+                                                     order_id=order.id) }}">
+                                <select name="status" aria-label="Order status">
+                                    {% for status in statuses %}
+                                    <option value="{{ status }}"
+                                        {% if status == order.status %}
+                                        selected{% endif %}>
+                                        {{ status }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <button class="btn-small" type="submit">
+                                    Update
+                                </button>
+                            </form>
+                            <form method="POST"
+                                  action="{{ url_for('delete_order',
+                                                     order_id=order.id) }}"
+                                  onsubmit="return confirm('Delete this order?')">
+                                <button class="btn-delete" type="submit">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span>🧾</span>
+        <h3>No orders yet</h3>
+        <p>Place your first order using the form above.</p>
+    </div>
+    {% endif %}
+</main>
+
+<footer>
+    <p>FoodFlow · Food Order Management System</p>
+    <a href="{{ url_for('health') }}">Application health</a>
+</footer>
+
+<script>
+    const foodSelect = document.getElementById("food_id");
+    const quantityInput = document.getElementById("quantity");
+    const totalDisplay = document.getElementById("estimated-total");
+
+    function calculateTotal() {
+        const option = foodSelect.options[foodSelect.selectedIndex];
+        const price = Number(option.dataset.price || 0);
+        const quantity = Number(quantityInput.value || 0);
+        totalDisplay.textContent = "₹" + (price * quantity).toFixed(2);
+    }
+
+    foodSelect.addEventListener("change", calculateTotal);
+    quantityInput.addEventListener("input", calculateTotal);
+
+    document.querySelectorAll(".choose-link").forEach(link => {
+        link.addEventListener("click", () => {
+            foodSelect.value = link.dataset.foodId;
+            calculateTotal();
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: food-order-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: food-order-app
+  template:
+    metadata:
+      labels:
+        app: food-order-app
+    spec:
+      containers:
+        - name: food-order-app
+          image: joshitha2404/food-order-management:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: DATABASE_PATH
+              value: /data/orders.db
+            - name: SECRET_KEY
+              value: change-this-before-production
+          volumeMounts:
+            - name: food-order-storage
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+      volumes:
+        - name: food-order-storage
+          persistentVolumeClaim:
+            claimName: food-order-data
