@@ -13,24 +13,24 @@ pipeline {
             }
         }
 
-        stage('Check Tools') {
-            steps {
-                bat 'docker --version'
-                bat 'python --version'
-            }
-        }
+       stage('Check Tools') {
+    steps {
+        bat 'docker --version'
+        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" --version'
+    }
+}
 
-        stage('Install Dependencies') {
-            steps {
-                bat 'python -m pip install -r requirements.txt'
-            }
-        }
+stage('Install Dependencies') {
+    steps {
+        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" -m pip install -r requirements.txt'
+    }
+}
 
-        stage('Run Tests') {
-            steps {
-                bat 'python -m pytest -v'
-            }
-        }
+stage('Run Tests') {
+    steps {
+        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" -m pytest -v'
+    }
+}
 
         stage('Build Docker Image') {
             steps {
