@@ -3,7 +3,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'yourdockerhubusername/food-order-management'
+        IMAGE_NAME = 'joshitha2404/food-order-management'
     }
 
     stages {
@@ -44,7 +44,7 @@ pipeline {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DOCKER_USER',
+                        usernameVariable: 'joshitha2404',
                         passwordVariable: 'DOCKER_TOKEN'
                     )
                 ]) {
