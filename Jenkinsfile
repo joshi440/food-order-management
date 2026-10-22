@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKER_USER = 'joshitha2404'
         IMAGE_NAME = 'food-order-management'
+        PYTHON = 'C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe'
     }
 
     stages {
@@ -13,24 +14,24 @@ pipeline {
             }
         }
 
-       stage('Check Tools') {
-    steps {
-        bat 'docker --version'
-        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" --version'
-    }
-}
+        stage('Check Tools') {
+            steps {
+                bat 'docker --version'
+                bat '"%PYTHON%" --version'
+            }
+        }
 
-stage('Install Dependencies') {
-    steps {
-        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" -m pip install -r requirements.txt'
-    }
-}
+        stage('Install Dependencies') {
+            steps {
+                bat '"%PYTHON%" -m pip install -r requirements.txt'
+            }
+        }
 
-stage('Run Tests') {
-    steps {
-        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" -m pytest -v'
-    }
-}
+        stage('Run Tests') {
+            steps {
+                bat '"%PYTHON%" -m pytest -v'
+            }
+        }
 
         stage('Build Docker Image') {
             steps {
@@ -49,7 +50,13 @@ stage('Run Tests') {
                     )
                 ]) {
                     powershell '''
-                        $env:DOCKER_TOKEN | docker login --username $env:DOCKER_LOGIN_USER --password-stdin
+                        $ErrorActionPreference = "Stop"
+
+                        $token = $env:DOCKER_TOKEN.Trim()
+                        $token | docker login `
+                            --username $env:DOCKER_LOGIN_USER `
+                            --password-stdin
+
                         if ($LASTEXITCODE -ne 0) {
                             exit $LASTEXITCODE
                         }
@@ -75,7 +82,7 @@ stage('Run Tests') {
     post {
         success {
             echo 'FoodFlow pipeline completed successfully!'
-            echo 'Image: joshitha2404/food-order-management:latest'
+            echo 'Docker image: joshitha2404/food-order-management:latest'
         }
 
         failure {
