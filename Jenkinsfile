@@ -1,90 +1,89 @@
-
 pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'joshitha2404/food-order-management'
+        DOCKER_USER = 'joshitha2404'
+        IMAGE_NAME = 'food-order-management'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
                 checkout scm
             }
         }
 
+        stage('Check Tools') {
+            steps {
+                bat 'docker --version'
+                bat 'python --version'
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    python3 -m venv .venv
-                    .venv/bin/pip install --upgrade pip
-                    .venv/bin/pip install -r requirements.txt
-                '''
+                bat 'python -m pip install -r requirements.txt'
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh '.venv/bin/python -m pytest -v'
+                bat 'python -m pytest -v'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME:$BUILD_NUMBER .'
-                sh 'docker tag $IMAGE_NAME:$BUILD_NUMBER $IMAGE_NAME:latest'
+                bat 'docker build -t %DOCKER_USER%/%IMAGE_NAME%:%BUILD_NUMBER% .'
+                bat 'docker tag %DOCKER_USER%/%IMAGE_NAME%:%BUILD_NUMBER% %DOCKER_USER%/%IMAGE_NAME%:latest'
             }
         }
 
-        stage('Push to Docker Hub') {
-            when {
-                branch 'main'
-            }
+        stage('Login to Docker Hub') {
             steps {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'joshitha2404',
+                        usernameVariable: 'DOCKER_LOGIN_USER',
                         passwordVariable: 'DOCKER_TOKEN'
                     )
                 ]) {
-                    sh '''
-                        set +x
-                        echo "$DOCKER_TOKEN" | docker login \
-                            -u "$DOCKER_USER" --password-stdin
-
-                        docker push "$IMAGE_NAME:$BUILD_NUMBER"
-                        docker push "$IMAGE_NAME:latest"
-
-                        docker logout
+                    powershell '''
+                        $env:DOCKER_TOKEN | docker login --username $env:DOCKER_LOGIN_USER --password-stdin
+                        if ($LASTEXITCODE -ne 0) {
+                            exit $LASTEXITCODE
+                        }
                     '''
                 }
             }
         }
 
-        stage('Deploy to Kubernetes') {
-            when {
-                branch 'main'
-            }
+        stage('Push to Docker Hub') {
             steps {
-                sh '''
-                    kubectl apply -f k8s/pvc.yaml
-                    kubectl apply -f k8s/deployment.yaml
-                    kubectl apply -f k8s/service.yaml
+                bat 'docker push %DOCKER_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
+                bat 'docker push %DOCKER_USER%/%IMAGE_NAME%:latest'
+            }
+        }
 
-                    kubectl set image deployment/food-order-app \
-                        food-order-app="$IMAGE_NAME:$BUILD_NUMBER"
-
-                    kubectl rollout status deployment/food-order-app \
-                        --timeout=180s
-                '''
+        stage('Docker Logout') {
+            steps {
+                bat 'docker logout'
             }
         }
     }
 
     post {
+        success {
+            echo 'FoodFlow pipeline completed successfully!'
+            echo 'Image: joshitha2404/food-order-management:latest'
+        }
+
+        failure {
+            echo 'Pipeline failed. Check the Jenkins Console Output.'
+        }
+
         always {
-            echo 'FoodFlow CI/CD pipeline finished.'
+            echo 'Pipeline execution finished.'
         }
     }
 }
