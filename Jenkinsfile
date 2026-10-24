@@ -53,8 +53,14 @@ pipeline {
                         $ErrorActionPreference = "Stop"
 
                         $token = $env:DOCKER_TOKEN.Trim()
+                        $username = $env:DOCKER_LOGIN_USER
+
+                        if ([string]::IsNullOrWhiteSpace($token)) {
+                            throw "Docker Hub token is empty."
+                        }
+
                         $token | docker login `
-                            --username $env:DOCKER_LOGIN_USER `
+                            --username $username `
                             --password-stdin
 
                         if ($LASTEXITCODE -ne 0) {
