@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -40,39 +41,38 @@ pipeline {
             }
         }
 
+        stage('Login to Docker Hub') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'docker-hub-token',
+                        usernameVariable: 'DOCKER_LOGIN_USER',
+                        passwordVariable: 'DOCKER_TOKEN'
+                    )
+                ]) {
+                    powershell '''
+                        $ErrorActionPreference = "Stop"
 
-stage('Login to Docker Hub') {
-    steps {
-        withCredentials([
-            usernamePassword(
-                credentialsId: 'docker-hub-token',
-                usernameVariable: 'DOCKER_LOGIN_USER',
-                passwordVariable: 'DOCKER_TOKEN'
-            )
-        ]) {
-            powershell '''
-                $ErrorActionPreference = "Stop"
+                        $token = $env:DOCKER_TOKEN.Trim()
+                        $username = $env:DOCKER_LOGIN_USER
 
-                $token = $env:DOCKER_TOKEN.Trim()
-                $username = $env:DOCKER_LOGIN_USER
+                        if ([string]::IsNullOrWhiteSpace($token)) {
+                            throw "Docker Hub token is empty."
+                        }
 
-                if ([string]::IsNullOrWhiteSpace($token)) {
-                    throw "Docker Hub token is empty."
+                        $token | docker login `
+                            --username $username `
+                            --password-stdin
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Docker Hub login failed."
+                        }
+
+                        Write-Host "Docker Hub login successful."
+                    '''
                 }
-
-                $token | docker login `
-                    --username $username `
-                    --password-stdin
-
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Docker Hub login failed."
-                }
-
-                Write-Host "Docker Hub login successful."
-            '''
+            }
         }
-    }
-}
 
         stage('Push to Docker Hub') {
             steps {
@@ -89,6 +89,11 @@ stage('Login to Docker Hub') {
     }
 
     post {
+        always {
+            bat 'docker logout'
+            echo 'Pipeline execution finished.'
+        }
+
         success {
             echo 'FoodFlow pipeline completed successfully!'
             echo 'Docker image: joshitha2404/food-order-management:latest'
@@ -96,10 +101,6 @@ stage('Login to Docker Hub') {
 
         failure {
             echo 'Pipeline failed. Check the Jenkins Console Output.'
-        }
-
-        always {
-            echo 'Pipeline execution finished.'
         }
     }
 }
