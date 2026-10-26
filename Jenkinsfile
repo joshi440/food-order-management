@@ -40,36 +40,39 @@ pipeline {
             }
         }
 
-        stage('Login to Docker Hub') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-pat-new',
-                        usernameVariable: 'DOCKER_LOGIN_USER',
-                        passwordVariable: 'DOCKER_TOKEN'
-                    )
-                ]) {
-                    powershell '''
-                        $ErrorActionPreference = "Stop"
 
-                        $token = $env:DOCKER_TOKEN.Trim()
-                        $username = $env:DOCKER_LOGIN_USER
+stage('Login to Docker Hub') {
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'docker-hub-token',
+                usernameVariable: 'DOCKER_LOGIN_USER',
+                passwordVariable: 'DOCKER_TOKEN'
+            )
+        ]) {
+            powershell '''
+                $ErrorActionPreference = "Stop"
 
-                        if ([string]::IsNullOrWhiteSpace($token)) {
-                            throw "Docker Hub token is empty."
-                        }
+                $token = $env:DOCKER_TOKEN.Trim()
+                $username = $env:DOCKER_LOGIN_USER
 
-                        $token | docker login `
-                            --username $username `
-                            --password-stdin
-
-                        if ($LASTEXITCODE -ne 0) {
-                            exit $LASTEXITCODE
-                        }
-                    '''
+                if ([string]::IsNullOrWhiteSpace($token)) {
+                    throw "Docker Hub token is empty."
                 }
-            }
+
+                $token | docker login `
+                    --username $username `
+                    --password-stdin
+
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Docker Hub login failed."
+                }
+
+                Write-Host "Docker Hub login successful."
+            '''
         }
+    }
+}
 
         stage('Push to Docker Hub') {
             steps {
