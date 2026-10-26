@@ -39,7 +39,23 @@ pipeline {
                 bat 'docker tag %DOCKER_USER%/%IMAGE_NAME%:%BUILD_NUMBER% %DOCKER_USER%/%IMAGE_NAME%:latest'
             }
         }
-
+stage('Check Docker Credential') {
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'dockerhub-pat-test',
+                usernameVariable: 'DOCKER_LOGIN_USER',
+                passwordVariable: 'DOCKER_TOKEN'
+            )
+        ]) {
+            powershell '''
+                Write-Host "Credential username: $env:DOCKER_LOGIN_USER"
+                Write-Host "Token present: $(-not [string]::IsNullOrWhiteSpace($env:DOCKER_TOKEN))"
+                Write-Host "Username matches expected: $($env:DOCKER_LOGIN_USER -eq 'joshitha2404')"
+            '''
+        }
+    }
+}
         stage('Login to Docker Hub') {
             steps {
                 withCredentials([
