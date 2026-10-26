@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKER_USER = 'joshitha2404'
         IMAGE_NAME = 'food-order-management'
+        PYTHON = 'C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe'
     }
 
     stages {
@@ -13,24 +14,24 @@ pipeline {
             }
         }
 
-       stage('Check Tools') {
-    steps {
-        bat 'docker --version'
-        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" --version'
-    }
-}
+        stage('Check Tools') {
+            steps {
+                bat 'docker --version'
+                bat '"%PYTHON%" --version'
+            }
+        }
 
-stage('Install Dependencies') {
-    steps {
-        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" -m pip install -r requirements.txt'
-    }
-}
+        stage('Install Dependencies') {
+            steps {
+                bat '"%PYTHON%" -m pip install -r requirements.txt'
+            }
+        }
 
-stage('Run Tests') {
-    steps {
-        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" -m pytest -v'
-    }
-}
+        stage('Run Tests') {
+            steps {
+                bat '"%PYTHON%" -m pytest -v'
+            }
+        }
 
         stage('Build Docker Image') {
             steps {
@@ -49,10 +50,22 @@ stage('Run Tests') {
                     )
                 ]) {
                     powershell '''
-                        $env:DOCKER_TOKEN | docker login --username $env:DOCKER_LOGIN_USER --password-stdin
-                        if ($LASTEXITCODE -ne 0) {
-                            exit $LASTEXITCODE
+                        $ErrorActionPreference = "Stop"
+
+                        $token = $env:DOCKER_TOKEN.Trim()
+                        $username = $env:DOCKER_LOGIN_USER
+
+                        if ([string]::IsNullOrWhiteSpace($token)) {
+                            throw "Docker Hub token is empty."
                         }
+
+                        $token | docker login --username $username --password-stdin
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Docker Hub login failed."
+                        }
+
+                        Write-Host "Docker Hub login successful."
                     '''
                 }
             }
@@ -62,12 +75,6 @@ stage('Run Tests') {
             steps {
                 bat 'docker push %DOCKER_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
                 bat 'docker push %DOCKER_USER%/%IMAGE_NAME%:latest'
-            }
-        }
-
-        stage('Docker Logout') {
-            steps {
-                bat 'docker logout'
             }
         }
     }
@@ -83,6 +90,7 @@ stage('Run Tests') {
         }
 
         always {
+            bat 'docker logout'
             echo 'Pipeline execution finished.'
         }
     }
