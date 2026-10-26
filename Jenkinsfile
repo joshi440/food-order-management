@@ -52,6 +52,7 @@ stage('Check Docker Credential') {
                 Write-Host "Credential username: $env:DOCKER_LOGIN_USER"
                 Write-Host "Token present: $(-not [string]::IsNullOrWhiteSpace($env:DOCKER_TOKEN))"
                 Write-Host "Username matches expected: $($env:DOCKER_LOGIN_USER -eq 'joshitha2404')"
+                docker context show
             '''
         }
     }
