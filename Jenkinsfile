@@ -1,11 +1,9 @@
-
 pipeline {
     agent any
 
     environment {
         DOCKER_USER = 'joshitha2404'
         IMAGE_NAME = 'food-order-management'
-        PYTHON = 'C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe'
     }
 
     stages {
@@ -15,24 +13,24 @@ pipeline {
             }
         }
 
-        stage('Check Tools') {
-            steps {
-                bat 'docker --version'
-                bat '"%PYTHON%" --version'
-            }
-        }
+       stage('Check Tools') {
+    steps {
+        bat 'docker --version'
+        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" --version'
+    }
+}
 
-        stage('Install Dependencies') {
-            steps {
-                bat '"%PYTHON%" -m pip install -r requirements.txt'
-            }
-        }
+stage('Install Dependencies') {
+    steps {
+        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" -m pip install -r requirements.txt'
+    }
+}
 
-        stage('Run Tests') {
-            steps {
-                bat '"%PYTHON%" -m pytest -v'
-            }
-        }
+stage('Run Tests') {
+    steps {
+        bat '"C:\\Users\\joshi\\AppData\\Local\\Programs\\Python\\Python310\\python.exe" -m pytest -v'
+    }
+}
 
         stage('Build Docker Image') {
             steps {
@@ -45,30 +43,16 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'docker-hub-token',
+                        credentialsId: '727757c3-484d-44bb-b528-e90970102d40',
                         usernameVariable: 'DOCKER_LOGIN_USER',
                         passwordVariable: 'DOCKER_TOKEN'
                     )
                 ]) {
                     powershell '''
-                        $ErrorActionPreference = "Stop"
-
-                        $token = $env:DOCKER_TOKEN.Trim()
-                        $username = $env:DOCKER_LOGIN_USER
-
-                        if ([string]::IsNullOrWhiteSpace($token)) {
-                            throw "Docker Hub token is empty."
-                        }
-
-                        $token | docker login `
-                            --username $username `
-                            --password-stdin
-
+                        $env:DOCKER_TOKEN | docker login --username $env:DOCKER_LOGIN_USER --password-stdin
                         if ($LASTEXITCODE -ne 0) {
-                            throw "Docker Hub login failed."
+                            exit $LASTEXITCODE
                         }
-
-                        Write-Host "Docker Hub login successful."
                     '''
                 }
             }
@@ -89,18 +73,17 @@ pipeline {
     }
 
     post {
-        always {
-            bat 'docker logout'
-            echo 'Pipeline execution finished.'
-        }
-
         success {
             echo 'FoodFlow pipeline completed successfully!'
-            echo 'Docker image: joshitha2404/food-order-management:latest'
+            echo 'Image: joshitha2404/food-order-management:latest'
         }
 
         failure {
             echo 'Pipeline failed. Check the Jenkins Console Output.'
+        }
+
+        always {
+            echo 'Pipeline execution finished.'
         }
     }
 }
